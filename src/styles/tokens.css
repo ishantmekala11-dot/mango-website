@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+@theme {
+  /* Color — dark (default) theme */
+  --color-ink: #0a0d13;
+  --color-ink-raised: #181d29;
+  --color-paper: #f3f0e7;
+  --color-paper-dim: #b9b6ad;
+  --color-cobalt: #3552ff;
+  --color-cobalt-bright: #6d84ff;
+
+  /* Typography */
+  --font-sans:
+    "Inter Variable", "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-display: "Playfair Display", "Inter", serif;
+
+  --text-2xs: 0.75rem; /* 12px — mono labels */
+  --text-xs: 0.8125rem;
+  --text-sm: 1rem; /* 16px — body */
+  --text-md: 1.375rem; /* 22px */
+  --text-lg: 2rem; /* 32px */
+  --text-xl: 2.5rem; /* 40px */
+  --text-2xl: 3.5rem; /* 56px */
+  --text-3xl: 4.5rem; /* 72px */
+
+  /* Spacing scale reference (16–64 "standard density", extended down/up).
+     Named `--space-*`, not `--spacing-*` — Tailwind v4 resolves named
+     max-w/w/gap/etc. utilities against any `--spacing-<name>` theme key,
+     so reusing "sm/md/lg/xl" there silently hijacks `max-w-lg` and friends. */
+  --space-3xs: 0.5rem; /* 8 */
+  --space-2xs: 1rem; /* 16 */
+  --space-xs: 1.5rem; /* 24 */
+  --space-sm: 2rem; /* 32 */
+  --space-md: 3rem; /* 48 */
+  --space-lg: 4rem; /* 64 */
+  --space-xl: 6rem; /* 96 */
+  --space-2xl: 9rem; /* 144 */
+
+  /* Motion durations — reference only, GSAP reads these via JS where needed */
+  --duration-fast: 0.2s;
+  --duration-medium: 0.5s;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Radii */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.75rem;
+}
+
+/* Public Speaking page flips to a bright theme — same tokens, inverted roles */
+[data-theme="bright"] {
+  --color-ink: #f3f0e7;
+  --color-ink-raised: #e7e2d3;
+  --color-paper: #0a0d13;
+  --color-paper-dim: #4a4842;
+  --color-cobalt: #3552ff;
+  --color-cobalt-bright: #1f38d6;
+}
