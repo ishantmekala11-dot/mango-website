@@ -1,0 +1,1635 @@
+<title>MANGO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@400;500;600;700;800;900&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+
+<style>
+/* ============================================================
+   TOKENS
+   ============================================================ */
+:root{
+  --ink:#0a0d13;
+  --ink-raise:#12161f;
+  --ink-raise-2:#181d29;
+  --rule: rgba(244,241,232,0.13);
+  --rule-strong: rgba(244,241,232,0.24);
+  --paper:#f3f0e7;
+  --paper-dim: rgba(243,240,231,0.62);
+  --paper-faint: rgba(243,240,231,0.34);
+  --slate: #9aa1b4;
+  --accent:#3552ff;
+  --accent-bright:#6d84ff;
+  --accent-dim:#1c2a80;
+  --accent-soft: rgba(53,82,255,0.14);
+  --bright-bg:#ece7d8;
+  --bright-ink:#0a0d13;
+  --bright-rule: rgba(10,13,19,0.14);
+
+  --f-display: 'Big Shoulders Display', 'Arial Narrow', sans-serif;
+  --f-body: 'IBM Plex Sans', -apple-system, sans-serif;
+  --f-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  --nav-h: 84px;
+  --nav-h-scrolled: 68px;
+  --edge: clamp(20px, 5vw, 64px);
+  --maxw: 1400px;
+}
+
+*,*::before,*::after{ box-sizing:border-box; }
+html{ scroll-behavior:smooth; background:var(--ink); }
+body{
+  margin:0;
+  background:var(--ink);
+  color:var(--paper);
+  font-family:var(--f-body);
+  font-size:16px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+body.menu-open{ overflow:hidden; }
+::selection{ background:var(--accent); color:var(--paper); }
+img,svg,canvas{ display:block; max-width:100%; }
+a{ color:inherit; text-decoration:none; }
+button{ font-family:inherit; background:none; border:none; color:inherit; cursor:pointer; }
+input,select,textarea{ font-family:inherit; color:inherit; background:none; }
+
+.eyebrow{
+  font-family:var(--f-mono); font-size:11px; letter-spacing:0.22em; text-transform:uppercase;
+  color:var(--slate); display:flex; align-items:center; gap:10px;
+}
+.eyebrow::before{ content:""; width:6px; height:6px; background:var(--accent); display:inline-block; flex:none; }
+.rule-h{ height:1px; background:var(--rule); border:none; margin:0; }
+.wrap{ max-width:var(--maxw); margin:0 auto; padding-left:var(--edge); padding-right:var(--edge); }
+h1,h2,h3{ font-family:var(--f-display); font-weight:700; text-wrap:balance; margin:0; letter-spacing:0.01em; }
+.tabular{ font-variant-numeric: tabular-nums; }
+.block{ padding:min(14vh,140px) 0; }
+.block-tight{ padding:min(9vh,90px) 0; }
+
+@media (prefers-reduced-motion: reduce){
+  *{ animation-duration:0.001ms !important; transition-duration:0.001ms !important; scroll-behavior:auto !important; }
+}
+
+/* ============================================================
+   PAGES / ROUTER
+   ============================================================ */
+.page{ display:none; }
+.page.is-active{ display:block; }
+#page-transition{
+  position:fixed; inset:0; z-index:4000; background:var(--ink);
+  transform:scaleX(0); transform-origin:left; pointer-events:none;
+}
+#page-transition.is-covering{ transition:transform .3s cubic-bezier(.7,0,.3,1); transform:scaleX(1); transform-origin:left; }
+#page-transition.is-revealing{ transition:transform .3s cubic-bezier(.7,0,.3,1); transform:scaleX(0); transform-origin:right; }
+
+/* bright page theme override — flips every nested component automatically */
+.page[data-page="public-speaking"]{
+  --ink: var(--bright-bg);
+  --ink-raise: #e2ddca;
+  --ink-raise-2: #d8d2bd;
+  --paper: var(--bright-ink);
+  --paper-dim: rgba(10,13,19,0.66);
+  --paper-faint: rgba(10,13,19,0.38);
+  --rule: var(--bright-rule);
+  --rule-strong: rgba(10,13,19,0.28);
+  --slate: #5c5d52;
+  background:var(--ink); color:var(--paper);
+}
+
+/* ============================================================
+   CUSTOM CURSOR
+   ============================================================ */
+body.has-fine-cursor{ cursor:none; }
+body.has-fine-cursor a, body.has-fine-cursor button{ cursor:none; }
+#cursor{
+  position:fixed; top:0; left:0; z-index:9999; width:26px; height:26px;
+  border:1px solid var(--paper); border-radius:50%; pointer-events:none; mix-blend-mode:difference;
+  transform:translate(-50%,-50%);
+  transition: width .25s cubic-bezier(.2,.8,.2,1), height .25s cubic-bezier(.2,.8,.2,1);
+  will-change:transform;
+}
+#cursor::after{ content:""; position:absolute; inset:0; margin:auto; width:4px; height:4px; background:var(--paper); border-radius:50%; }
+#cursor.is-link{ width:64px; height:64px; }
+#cursor.is-image{ width:88px; height:88px; }
+#cursor.is-button{ width:70px; height:70px; }
+#cursor.is-hidden{ opacity:0; }
+.cursor-tag{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-family:var(--f-mono); font-size:9px; letter-spacing:0.15em; text-transform:uppercase; opacity:0; transition:opacity .2s; color:#fff; }
+#cursor.is-image .cursor-tag, #cursor.is-button .cursor-tag{ opacity:1; }
+
+/* ============================================================
+   NAV
+   ============================================================ */
+#nav{
+  position:fixed; top:0; left:0; right:0; z-index:500; height:var(--nav-h);
+  display:flex; align-items:center; padding:0 var(--edge);
+  transition: background-color .4s ease, border-color .4s ease, height .3s ease;
+  border-bottom:1px solid transparent;
+}
+#nav.is-scrolled{
+  height:var(--nav-h-scrolled);
+  background:rgba(10,13,19,0.62); backdrop-filter:blur(16px) saturate(140%); -webkit-backdrop-filter:blur(16px) saturate(140%);
+  border-bottom:1px solid var(--rule);
+}
+.nav-inner{ width:100%; max-width:var(--maxw); margin:0 auto; display:flex; align-items:center; justify-content:space-between; gap:24px; }
+.nav-brand{ display:flex; flex-direction:column; gap:2px; line-height:1; }
+.nav-brand .mark{ font-family:var(--f-display); font-weight:800; font-size:26px; letter-spacing:0.02em; color:var(--paper); }
+.nav-brand .sub{ font-family:var(--f-mono); font-size:8.5px; letter-spacing:0.18em; color:var(--slate); }
+.nav-links{ display:flex; gap:26px; list-style:none; margin:0; padding:0; }
+.nav-links a{
+  font-family:var(--f-mono); font-size:11px; letter-spacing:0.1em; text-transform:uppercase;
+  color:var(--paper-dim); position:relative; padding-bottom:4px;
+}
+.nav-links a::after{ content:""; position:absolute; left:0; bottom:0; height:1px; width:0; background:var(--accent-bright); transition:width .3s ease; }
+.nav-links a:hover, .nav-links a.is-active{ color:var(--paper); }
+.nav-links a:hover::after, .nav-links a.is-active::after{ width:100%; }
+.nav-cta{
+  font-family:var(--f-mono); font-size:11px; letter-spacing:0.08em; text-transform:uppercase;
+  border:1px solid var(--rule-strong); padding:11px 18px; white-space:nowrap;
+  transition: background .3s, border-color .3s, color .3s;
+}
+.nav-cta:hover{ background:var(--accent); border-color:var(--accent); color:#fff; }
+.nav-burger{ display:none; flex-direction:column; gap:5px; width:26px; padding:6px 0; }
+.nav-burger span{ height:1px; background:var(--paper); display:block; }
+@media (max-width:980px){
+  .nav-links{ display:none; }
+  .nav-burger{ display:flex; }
+}
+
+#mobile-menu{
+  position:fixed; inset:0; z-index:3000; background:var(--ink);
+  display:flex; flex-direction:column; justify-content:center; padding:0 var(--edge);
+  transform:translateY(-100%); transition:transform .45s cubic-bezier(.7,0,.3,1);
+}
+#mobile-menu.is-open{ transform:translateY(0); }
+.mm-close{ position:absolute; top:28px; right:var(--edge); font-family:var(--f-mono); font-size:12px; letter-spacing:0.1em; }
+.mm-links{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px; }
+.mm-links a{ font-family:var(--f-display); font-weight:700; font-size:clamp(34px,11vw,60px); color:var(--paper-faint); display:block; padding:8px 0; }
+.mm-links a.is-active{ color:var(--paper); }
+.mm-cta{ margin-top:40px; display:inline-block; font-family:var(--f-mono); font-size:13px; letter-spacing:0.1em; border:1px solid var(--rule-strong); padding:16px 22px; }
+
+/* ============================================================
+   REVEAL UTILS
+   ============================================================ */
+[data-reveal]{ opacity:0; transform:translateY(28px); transition:opacity .9s cubic-bezier(.2,.7,.2,1), transform .9s cubic-bezier(.2,.7,.2,1); }
+[data-reveal].is-visible{ opacity:1; transform:none; }
+[data-reveal="scale"]{ transform:scale(0.94); }
+[data-reveal="scale"].is-visible{ transform:scale(1); }
+
+/* ============================================================
+   HERO (shared skeleton, used per-page with modifiers)
+   ============================================================ */
+.hero{ min-height:100vh; display:flex; flex-direction:column; justify-content:flex-end; padding-top:var(--nav-h); position:relative; overflow:hidden; }
+.hero-canvas-holder{ position:absolute; inset:0; z-index:0; }
+.hero-canvas-holder canvas{ position:absolute; inset:0; width:100%; height:100%; opacity:.85; }
+.hero-fade{ content:""; position:absolute; inset:0; z-index:0; pointer-events:none; background:radial-gradient(ellipse 80% 60% at 62% 34%, transparent 0%, var(--ink) 92%); }
+.hero-body{ position:relative; z-index:2; padding-bottom:0; }
+.hero-grid{ display:grid; grid-template-columns:1.15fr 0.85fr; gap:40px; align-items:end; padding-bottom:min(9vh,80px); }
+.hero-kicker{ font-family:var(--f-mono); font-size:12px; letter-spacing:0.26em; text-transform:uppercase; color:var(--slate); margin-bottom:18px; }
+.hero-mark{ font-family:var(--f-display); font-weight:800; font-size:clamp(50px,9vw,120px); line-height:0.86; color:var(--paper); margin-bottom:4px; }
+.hero-lines .l1{ font-family:var(--f-display); font-weight:600; font-size:clamp(20px,3.4vw,42px); color:var(--paper-dim); display:block; line-height:1.05; }
+.hero-lines .l2{ font-family:var(--f-display); font-weight:700; font-size:clamp(26px,4.6vw,58px); color:var(--paper); display:block; line-height:1.05; }
+.hero-lines .l2 em{ font-style:normal; color:var(--accent-bright); background:linear-gradient(180deg, transparent 62%, var(--accent-soft) 62%); }
+.hero-sub{ max-width:400px; font-size:16px; color:var(--paper-dim); margin-top:20px; }
+.hero-actions{ display:flex; gap:14px; flex-wrap:wrap; margin-top:26px; }
+.hero-hud{ justify-self:end; width:100%; max-width:340px; border:1px solid var(--rule); background:rgba(10,13,19,0.35); padding:16px; }
+.hero-hud .hud-label{ font-family:var(--f-mono); font-size:9.5px; letter-spacing:0.14em; color:var(--slate); text-transform:uppercase; }
+.hero-hud .hud-line{ font-family:var(--f-mono); font-size:13px; color:var(--accent-bright); margin-top:8px; min-height:18px; }
+.hero-coord{ position:absolute; font-family:var(--f-mono); font-size:10px; letter-spacing:0.08em; color:var(--paper-faint); z-index:1; }
+.hero-marquee{ position:relative; z-index:2; border-top:1px solid var(--rule); overflow:hidden; padding:16px 0; }
+.hero-marquee .mq-track{ display:flex; white-space:nowrap; width:max-content; animation:mq-scroll 26s linear infinite; }
+.hero-marquee span{ font-family:var(--f-mono); font-size:12px; letter-spacing:0.16em; text-transform:uppercase; color:var(--slate); padding:0 22px; }
+.hero-marquee span::before{ content:"—"; margin-right:22px; color:var(--rule-strong); }
+@keyframes mq-scroll{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
+
+.hero-plain{ min-height:66vh; display:flex; flex-direction:column; justify-content:center; padding-top:var(--nav-h); }
+.hero-plain h1{ font-size:clamp(46px,9vw,120px); line-height:0.9; }
+.hero-plain .stack{ margin-top:20px; display:flex; flex-direction:column; gap:2px; }
+.hero-plain .stack span{ font-family:var(--f-display); font-weight:600; font-size:clamp(18px,2.6vw,30px); color:var(--paper-dim); }
+.hero-plain p.lead{ max-width:56ch; color:var(--paper-dim); font-size:clamp(16px,1.6vw,19px); margin-top:22px; }
+
+@media (max-width:900px){
+  .hero-grid{ grid-template-columns:1fr; }
+  .hero-hud{ justify-self:start; }
+}
+
+/* ============================================================
+   STATEMENT / WORD REVEAL
+   ============================================================ */
+.statement{ padding:min(22vh,200px) 0; display:flex; align-items:center; justify-content:center; text-align:center; }
+.statement-text{ max-width:1100px; font-family:var(--f-display); font-weight:700; font-size:clamp(28px,5.2vw,68px); line-height:1.1; }
+.statement-line{ display:block; margin-top:0.2em; }
+.word{ display:inline-block; opacity:0.14; transition:opacity .5s ease; }
+.word.is-on{ opacity:1; }
+
+/* ============================================================
+   STATS
+   ============================================================ */
+.stat-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--rule); border:1px solid var(--rule); margin-top:50px; }
+.stat{ background:var(--ink); padding:44px 30px; text-align:left; }
+.stat .num{ font-family:var(--f-display); font-weight:700; font-size:clamp(46px,6vw,90px); line-height:1; color:var(--paper); }
+.stat .num::after{ content:"+"; color:var(--accent-bright); }
+.stat .label{ font-family:var(--f-mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--slate); margin-top:10px; }
+.stat-note{ margin-top:22px; font-family:var(--f-mono); font-size:11px; color:var(--slate); letter-spacing:0.05em; }
+@media (max-width:760px){ .stat-grid{ grid-template-columns:repeat(2,1fr); } }
+
+/* ============================================================
+   WHAT WE DO — panels
+   ============================================================ */
+.panels{ display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--rule); border:1px solid var(--rule); margin-top:50px; }
+.panel{ position:relative; min-height:420px; padding:34px; display:flex; flex-direction:column; justify-content:flex-end; overflow:hidden; }
+.panel-bg{ position:absolute; inset:0; z-index:0; }
+.panel-num{ font-family:var(--f-mono); font-size:12px; color:var(--slate); letter-spacing:0.1em; position:relative; z-index:1; }
+.panel h3{ font-family:var(--f-display); font-weight:800; font-size:clamp(30px,3.4vw,44px); margin-top:14px; position:relative; z-index:1; }
+.panel p{ margin-top:12px; color:var(--paper-dim); font-size:14.5px; max-width:32ch; position:relative; z-index:1; }
+.panel .plink{ margin-top:18px; font-family:var(--f-mono); font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--accent-bright); position:relative; z-index:1; }
+.panel.p-mun{ background:var(--ink-raise); }
+.panel.p-speak{ background:var(--bright-bg); color:var(--bright-ink); }
+.panel.p-speak p{ color:rgba(10,13,19,0.62); }
+.panel.p-lead{ background:linear-gradient(160deg, var(--accent-dim), var(--ink-raise) 70%); }
+.panel-bars{ position:absolute; inset:0; display:flex; align-items:flex-end; gap:6px; padding:34px; opacity:0.5; }
+.panel-bars i{ flex:1; background:var(--accent-bright); opacity:0.5; }
+@media (max-width:900px){ .panels{ grid-template-columns:1fr; } }
+
+/* ============================================================
+   ACHIEVEMENT WALL
+   ============================================================ */
+.wall-item{ border-top:1px solid var(--rule); padding:44px 0; display:grid; grid-template-columns:70px 1fr auto; gap:24px; align-items:baseline; }
+.wall-item.is-featured{ padding:70px 0; }
+.wall-item:last-child{ border-bottom:1px solid var(--rule); }
+.wall-item .wi-idx{ font-family:var(--f-mono); font-size:13px; color:var(--slate); }
+.wall-item h3{ font-family:var(--f-display); font-weight:800; font-size:clamp(28px,5vw,64px); line-height:0.96; }
+.wall-item.is-featured h3{ font-size:clamp(40px,8vw,110px); }
+.wall-item .wi-sub{ font-family:var(--f-display); font-weight:500; font-size:clamp(16px,2vw,26px); color:var(--paper-faint); display:block; margin-top:4px; }
+.wall-item .wi-year{ font-family:var(--f-mono); font-size:15px; color:var(--accent-bright); justify-self:end; }
+.wall-item .wi-meta{ grid-column:2 / 3; margin-top:10px; font-family:var(--f-mono); font-size:11px; color:var(--slate); letter-spacing:0.06em; }
+
+/* ============================================================
+   TIMELINE
+   ============================================================ */
+.tl-wrap{ position:relative; margin-top:60px; padding-left:60px; }
+.tl-spine{ position:absolute; left:8px; top:0; bottom:0; width:1px; background:var(--rule); }
+.tl-spine-fill{ position:absolute; left:0; top:0; width:100%; height:0%; background:var(--accent-bright); }
+.tl-item{ position:relative; padding-bottom:80px; }
+.tl-item:last-child{ padding-bottom:0; }
+.tl-dot{ position:absolute; left:-60px; top:6px; width:15px; height:15px; border-radius:50%; background:var(--ink); border:1px solid var(--rule-strong); transition:background .4s,border-color .4s,transform .4s; }
+.tl-item.is-visible .tl-dot{ background:var(--accent-bright); border-color:var(--accent-bright); transform:scale(1.15); }
+.tl-year{ font-family:var(--f-mono); font-size:13px; color:var(--accent-bright); letter-spacing:0.1em; }
+.tl-item h3{ font-family:var(--f-display); font-weight:700; font-size:clamp(24px,3.2vw,42px); margin-top:10px; color:var(--paper-faint); transition:color .5s; }
+.tl-item.is-visible h3{ color:var(--paper); }
+.tl-tag{ display:inline-block; margin-top:12px; font-family:var(--f-mono); font-size:10.5px; letter-spacing:0.12em; text-transform:uppercase; background:var(--accent-soft); color:var(--accent-bright); padding:5px 10px; }
+.tl-item p{ margin-top:14px; max-width:56ch; color:var(--paper-dim); font-size:16px; }
+
+/* ============================================================
+   STORY CARDS (Impact stories)
+   ============================================================ */
+.story{ display:grid; grid-template-columns:1fr 1fr; gap:50px; align-items:center; border-top:1px solid var(--rule); padding:60px 0; }
+.story:last-child{ border-bottom:1px solid var(--rule); }
+.story:nth-child(even){ direction:rtl; }
+.story:nth-child(even) > *{ direction:ltr; }
+.story-img{ aspect-ratio:4/3; background:repeating-linear-gradient(135deg, var(--ink-raise) 0 2px, var(--ink-raise-2) 2px 4px); display:flex; align-items:center; justify-content:center; border:1px solid var(--rule); }
+.story-img span{ font-family:var(--f-mono); font-size:10px; color:var(--slate); letter-spacing:0.1em; }
+.story-year{ font-family:var(--f-mono); font-size:12px; color:var(--accent-bright); letter-spacing:0.1em; }
+.story h3{ font-family:var(--f-display); font-weight:700; font-size:clamp(24px,3vw,38px); margin-top:10px; }
+.story .s-what, .story .s-why{ margin-top:14px; color:var(--paper-dim); font-size:15.5px; max-width:48ch; }
+.story .s-label{ font-family:var(--f-mono); font-size:10px; letter-spacing:0.1em; color:var(--slate); text-transform:uppercase; display:block; margin-top:16px; }
+@media (max-width:800px){ .story{ grid-template-columns:1fr; } .story:nth-child(even){ direction:ltr; } }
+
+/* ============================================================
+   PHOTO STRIP
+   ============================================================ */
+.strip{ display:flex; gap:10px; overflow-x:auto; margin-top:40px; padding-bottom:10px; scroll-snap-type:x proximity; }
+.strip-tile{ flex:0 0 auto; width:min(70vw,320px); aspect-ratio:4/5; background:repeating-linear-gradient(135deg, var(--ink-raise) 0 2px, var(--ink-raise-2) 2px 4px); border:1px solid var(--rule); scroll-snap-align:start; position:relative; display:flex; align-items:flex-end; }
+.strip-tile span{ font-family:var(--f-mono); font-size:10px; color:var(--slate); letter-spacing:0.08em; padding:12px; }
+
+/* ============================================================
+   PROCESS ARROW ROW
+   ============================================================ */
+.arrow-row{ display:flex; flex-wrap:wrap; gap:14px 26px; margin:40px 0; align-items:center; }
+.arrow-row span{ font-family:var(--f-display); font-weight:700; font-size:clamp(20px,3.2vw,40px); color:var(--paper-faint); }
+.arrow-row span.arrow{ color:var(--accent-bright); font-family:var(--f-body); font-size:0.6em; }
+.arrow-row.is-visible span{ color:var(--paper); transition:color .5s ease; }
+
+/* ============================================================
+   TAGS
+   ============================================================ */
+.tag-list{ display:flex; flex-wrap:wrap; gap:10px; }
+.tag-list span{ font-family:var(--f-mono); font-size:12px; letter-spacing:0.06em; padding:9px 14px; border:1px solid var(--rule-strong); text-transform:uppercase; }
+
+/* ============================================================
+   JOURNEY (pinned horizontal scroll) — reused for MUN process
+   ============================================================ */
+.journey-wrap{ position:relative; height:600vh; }
+.journey-sticky{ position:sticky; top:0; height:100vh; overflow:hidden; display:flex; align-items:center; }
+.journey-track{ display:flex; will-change:transform; }
+.journey-stage{ min-width:100vw; height:100vh; display:flex; flex-direction:column; justify-content:center; padding:0 var(--edge); border-right:1px solid var(--rule); }
+.journey-stage .jn{ font-family:var(--f-mono); font-size:15px; color:var(--accent-bright); letter-spacing:0.1em; margin-bottom:20px; }
+.journey-stage h3{ font-family:var(--f-display); font-weight:800; font-size:clamp(52px,11vw,150px); line-height:0.86; color:var(--paper); }
+.journey-stage p{ max-width:440px; margin-top:22px; font-size:clamp(15px,1.5vw,19px); color:var(--paper-dim); }
+.journey-progress{ position:absolute; left:var(--edge); right:var(--edge); bottom:60px; height:1px; background:var(--rule); }
+.journey-progress-bar{ height:100%; background:var(--accent-bright); width:0%; }
+.journey-index{ position:absolute; right:var(--edge); top:calc(var(--nav-h) + 20px); font-family:var(--f-mono); font-size:12px; color:var(--slate); }
+@media (max-width:900px){
+  .journey-wrap{ height:auto; }
+  .journey-sticky{ position:relative; height:auto; flex-direction:column; }
+  .journey-track{ flex-direction:column; }
+  .journey-stage{ min-width:100%; height:auto; padding:60px var(--edge); border-right:none; border-top:1px solid var(--rule); }
+  .journey-progress, .journey-index{ display:none; }
+}
+
+/* ============================================================
+   MAP
+   ============================================================ */
+.map-box{ position:relative; aspect-ratio:16/9; background:var(--ink-raise); border:1px solid var(--rule); overflow:hidden; }
+.map-box canvas{ position:absolute; inset:0; width:100%; height:100%; }
+.map-hub{ position:absolute; width:8px; height:8px; margin:-4px 0 0 -4px; border-radius:50%; background:var(--accent-bright); box-shadow:0 0 0 4px var(--accent-soft); }
+.map-hub::before{ content:""; position:absolute; inset:-8px; border:1px solid var(--accent-dim); border-radius:50%; animation:pulse-ring 3s ease-out infinite; }
+@keyframes pulse-ring{ 0%{ transform:scale(0.4); opacity:0.8; } 100%{ transform:scale(2.4); opacity:0; } }
+.map-tip{ position:absolute; bottom:14px; left:14px; padding:8px 10px; background:rgba(10,13,19,0.9); border:1px solid var(--rule); font-family:var(--f-mono); font-size:10px; letter-spacing:0.1em; opacity:0; transform:translateY(6px); transition:opacity .2s, transform .2s; pointer-events:none; white-space:nowrap; color:var(--paper); }
+.map-tip.is-shown{ opacity:1; transform:none; }
+.map-caption{ margin-top:14px; font-family:var(--f-mono); font-size:10px; color:var(--slate); letter-spacing:0.05em; }
+
+/* ============================================================
+   WAVEFORM
+   ============================================================ */
+.wave-box canvas{ width:100%; height:260px; display:block; }
+.wave-caption{ margin-top:14px; font-family:var(--f-mono); font-size:11px; color:var(--slate); letter-spacing:0.05em; }
+
+/* ============================================================
+   PEOPLE
+   ============================================================ */
+.people-cat{ margin-top:60px; }
+.people-cat h3{ font-family:var(--f-mono); font-size:12px; letter-spacing:0.16em; text-transform:uppercase; color:var(--slate); padding-bottom:16px; border-bottom:1px solid var(--rule); }
+.people-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--rule); border:1px solid var(--rule); margin-top:1px; }
+.person{ background:var(--ink); position:relative; overflow:hidden; aspect-ratio:3/4; }
+.person-photo{ position:absolute; inset:0; background:repeating-linear-gradient(135deg, var(--ink-raise) 0 2px, var(--ink-raise-2) 2px 4px); display:flex; align-items:center; justify-content:center; }
+.person-photo::after{ content:"[ PHOTO PENDING ]"; font-family:var(--f-mono); font-size:9.5px; letter-spacing:0.08em; color:var(--slate); }
+.person-info{ position:absolute; left:0; right:0; bottom:0; padding:18px; background:linear-gradient(0deg, rgba(10,13,19,0.96) 40%, transparent 100%); transform:translateY(calc(100% - 58px)); transition:transform .4s cubic-bezier(.2,.7,.2,1); }
+.person:hover .person-info{ transform:translateY(0); }
+.person-info .p-name{ font-family:var(--f-display); font-weight:700; font-size:19px; color:#fff; }
+.person-info .p-role{ font-family:var(--f-mono); font-size:10px; letter-spacing:0.08em; color:var(--accent-bright); text-transform:uppercase; margin-top:4px; }
+.person-info .p-bio{ font-size:12.5px; color:rgba(255,255,255,0.7); margin-top:10px; opacity:0; transition:opacity .3s .1s; }
+.person:hover .person-info .p-bio{ opacity:1; }
+@media (max-width:900px){ .people-grid{ grid-template-columns:repeat(2,1fr); } }
+
+/* ============================================================
+   ACCORDION (About — acronym)
+   ============================================================ */
+.acc-row{ border-top:1px solid var(--rule); padding:26px 0; cursor:pointer; }
+.acc-row:last-child{ border-bottom:1px solid var(--rule); }
+.acc-head{ display:flex; align-items:baseline; gap:24px; }
+.acc-head .ch{ font-family:var(--f-display); font-weight:800; font-size:clamp(40px,6vw,64px); color:var(--paper-faint); transition:color .4s; }
+.acc-row.is-open .acc-head .ch, .acc-row:hover .acc-head .ch{ color:var(--accent-bright); }
+.acc-head .word{ font-family:var(--f-mono); font-size:13px; letter-spacing:0.16em; color:var(--paper); opacity:1; text-transform:uppercase; }
+.acc-head .plus{ margin-left:auto; font-family:var(--f-mono); font-size:20px; color:var(--slate); transition:transform .4s; }
+.acc-row.is-open .acc-head .plus{ transform:rotate(45deg); }
+.acc-def{ max-height:0; overflow:hidden; opacity:0; transition:max-height .5s ease, opacity .4s ease; }
+.acc-row.is-open .acc-def{ max-height:200px; opacity:1; }
+@media (hover:hover){ .acc-row:hover .acc-def{ max-height:200px; opacity:1; } }
+.acc-def p{ padding:16px 0 0 calc(64px + 24px); max-width:56ch; color:var(--paper-dim); font-size:17px; }
+@media (max-width:700px){ .acc-def p{ padding-left:0; } }
+
+/* ============================================================
+   MVV (Mission/Vision/Values)
+   ============================================================ */
+.mvv{ display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--rule); border:1px solid var(--rule); margin-top:50px; }
+.mvv-item{ background:var(--ink); padding:36px 30px; }
+.mvv-item .eyebrow{ margin-bottom:16px; }
+.mvv-item p{ color:var(--paper-dim); font-size:15.5px; }
+@media (max-width:800px){ .mvv{ grid-template-columns:1fr; } }
+
+/* ============================================================
+   FILTERS
+   ============================================================ */
+.filter-bar{ display:flex; flex-wrap:wrap; gap:10px; margin-top:36px; }
+.filter-bar button{ font-family:var(--f-mono); font-size:11px; letter-spacing:0.1em; text-transform:uppercase; padding:10px 16px; border:1px solid var(--rule-strong); color:var(--paper-dim); transition:background .25s, color .25s, border-color .25s; }
+.filter-bar button.is-active{ background:var(--paper); color:var(--ink); border-color:var(--paper); }
+
+/* ============================================================
+   ACHIEVEMENT ROWS (Achievements page)
+   ============================================================ */
+.ach-row{ border-top:1px solid var(--rule); padding:40px 0; display:grid; grid-template-columns:90px 1fr 140px; gap:24px; align-items:center; transition:opacity .3s; }
+.ach-row:last-child{ border-bottom:1px solid var(--rule); }
+.ach-row .ar-swatch{ aspect-ratio:1; background:repeating-linear-gradient(135deg, var(--ink-raise) 0 2px, var(--ink-raise-2) 2px 4px); border:1px solid var(--rule); display:flex; align-items:center; justify-content:center; }
+.ach-row .ar-swatch span{ font-family:var(--f-mono); font-size:7.5px; color:var(--slate); }
+.ach-row h3{ font-family:var(--f-display); font-weight:800; font-size:clamp(22px,3.4vw,40px); }
+.ach-row .ar-sub{ font-family:var(--f-display); font-weight:500; font-size:15px; color:var(--paper-faint); margin-top:4px; }
+.ach-row .ar-meta{ font-family:var(--f-mono); font-size:10.5px; color:var(--slate); letter-spacing:0.06em; margin-top:8px; text-transform:uppercase; }
+.ach-row .ar-tag{ display:inline-block; margin-top:8px; font-family:var(--f-mono); font-size:9.5px; letter-spacing:0.1em; text-transform:uppercase; background:var(--accent-soft); color:var(--accent-bright); padding:4px 8px; }
+.ach-row .ar-year{ font-family:var(--f-mono); font-size:16px; color:var(--accent-bright); text-align:right; }
+@media (max-width:700px){ .ach-row{ grid-template-columns:60px 1fr; } .ach-row .ar-year{ grid-column:2; text-align:left; } }
+
+/* ============================================================
+   GALLERY
+   ============================================================ */
+.gallery-grid{ display:grid; grid-template-columns:repeat(6,1fr); grid-auto-rows:120px; gap:6px; margin-top:40px; }
+.g-tile{ position:relative; overflow:hidden; cursor:pointer; background:var(--ink-raise); border:1px solid var(--rule); transition:opacity .3s; }
+.g-tile .g-photo{ position:absolute; inset:0; transition:transform .5s ease; background:repeating-linear-gradient(45deg, var(--ink-raise) 0 3px, var(--ink-raise-2) 3px 6px); }
+.g-tile:hover .g-photo{ transform:scale(1.06); }
+.g-tile .g-info{ position:absolute; left:0; right:0; bottom:0; padding:10px 12px; font-family:var(--f-mono); font-size:9.5px; letter-spacing:0.08em; color:var(--slate); background:linear-gradient(0deg, rgba(10,13,19,0.85), transparent); text-transform:uppercase; }
+.g-tile .g-idx{ position:absolute; top:10px; right:12px; font-family:var(--f-mono); font-size:10px; color:var(--paper-faint); }
+.g1{ grid-column:span 3; grid-row:span 2; } .g2{ grid-column:span 2; } .g3{ grid-column:span 1; }
+.g4{ grid-column:span 2; grid-row:span 2; } .g5{ grid-column:span 2; } .g6{ grid-column:span 2; }
+.g7{ grid-column:span 2; grid-row:span 2; } .g8{ grid-column:span 4; } .g9{ grid-column:span 2; }
+.g10{ grid-column:span 3; }
+@media (max-width:900px){ .gallery-grid{ grid-template-columns:repeat(2,1fr); } .g1,.g2,.g3,.g4,.g5,.g6,.g7,.g8,.g9,.g10{ grid-column:span 1; grid-row:span 1; } }
+#lightbox{ position:fixed; inset:0; z-index:2500; background:rgba(10,13,19,0.96); display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity .3s; }
+#lightbox.is-open{ opacity:1; pointer-events:auto; }
+#lightbox .lb-frame{ width:min(70vw,720px); aspect-ratio:4/3; background:var(--ink-raise); border:1px solid var(--rule-strong); display:flex; align-items:center; justify-content:center; flex-direction:column; gap:12px; }
+#lightbox .lb-frame span{ font-family:var(--f-mono); font-size:11px; color:var(--slate); letter-spacing:0.1em; }
+#lightbox .lb-close{ position:absolute; top:30px; right:var(--edge); font-family:var(--f-mono); font-size:12px; letter-spacing:0.1em; border:1px solid var(--rule-strong); padding:10px 16px; color:var(--paper); }
+
+/* ============================================================
+   FORM (Join)
+   ============================================================ */
+.form-grid{ display:grid; grid-template-columns:1fr 1fr; gap:26px; margin-top:50px; }
+.field{ display:flex; flex-direction:column; gap:10px; }
+.field.full{ grid-column:1/-1; }
+.field label{ font-family:var(--f-mono); font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:var(--slate); }
+.field input, .field select, .field textarea{ border:none; border-bottom:1px solid var(--rule-strong); padding:10px 2px; font-size:16px; color:var(--paper); }
+.field select option{ background:var(--ink); color:var(--paper); }
+.field input:focus, .field select:focus, .field textarea:focus{ outline:none; border-color:var(--accent-bright); }
+.field textarea{ resize:vertical; min-height:100px; }
+.form-submit{ margin-top:10px; }
+.form-note{ margin-top:16px; font-family:var(--f-mono); font-size:11px; color:var(--slate); }
+.form-success{ display:none; border:1px solid var(--rule-strong); padding:36px; margin-top:50px; }
+.form-success.is-shown{ display:block; }
+.form-success h3{ font-size:clamp(22px,3vw,32px); }
+.form-success p{ margin-top:10px; color:var(--paper-dim); }
+
+/* ============================================================
+   BIG STATEMENT / QUOTE
+   ============================================================ */
+.quote-block{ text-align:center; padding:min(16vh,150px) 0; }
+.quote-block q{ font-family:var(--f-display); font-weight:700; font-size:clamp(30px,6vw,80px); line-height:1.06; quotes:none; }
+
+/* ============================================================
+   SECTION HEAD
+   ============================================================ */
+.section-head h2{ font-size:clamp(36px,6.2vw,80px); line-height:0.96; }
+.section-head p.lead{ max-width:56ch; color:var(--paper-dim); font-size:18px; margin-top:20px; }
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+#footer{ border-top:1px solid var(--rule); padding:70px 0 30px; background:var(--ink); position:relative; z-index:1; }
+.footer-top{ display:flex; justify-content:space-between; gap:40px; flex-wrap:wrap; padding-bottom:50px; }
+.footer-brand .mark{ font-family:var(--f-display); font-weight:800; font-size:40px; }
+.footer-brand .sub{ font-family:var(--f-mono); font-size:11px; color:var(--slate); letter-spacing:0.14em; margin-top:8px; }
+.footer-cols{ display:flex; gap:70px; flex-wrap:wrap; }
+.footer-col h4{ font-family:var(--f-mono); font-size:10.5px; letter-spacing:0.14em; color:var(--slate); text-transform:uppercase; margin:0 0 16px; }
+.footer-col ul{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px; }
+.footer-col a{ font-size:14.5px; color:var(--paper-dim); transition:color .2s; }
+.footer-col a:hover{ color:var(--paper); }
+.footer-bottom{ display:flex; justify-content:space-between; padding-top:26px; border-top:1px solid var(--rule); flex-wrap:wrap; gap:14px; }
+.footer-bottom span{ font-family:var(--f-mono); font-size:11px; color:var(--slate); }
+
+/* ============================================================
+   MISC RESPONSIVE
+   ============================================================ */
+@media (max-width:900px){
+  .panels{ grid-template-columns:1fr; }
+}
+.btn{ display:inline-flex; align-items:center; gap:10px; font-family:var(--f-mono); font-size:12px; letter-spacing:0.1em; text-transform:uppercase; padding:15px 22px; border:1px solid var(--rule-strong); white-space:nowrap; transition:background .3s,border-color .3s,color .3s,transform .3s; }
+.btn:hover{ transform:translateY(-2px); }
+.btn-solid{ background:var(--paper); color:var(--ink); border-color:var(--paper); }
+.btn-solid:hover{ background:var(--accent-bright); border-color:var(--accent-bright); color:#fff; }
+.btn-ghost:hover{ border-color:var(--accent-bright); color:var(--accent-bright); }
+</style>
+
+<div id="page-transition"></div>
+<div id="cursor"><span class="cursor-tag"></span></div>
+
+<div id="mobile-menu">
+  <button class="mm-close" data-cursor="button">Close &#10005;</button>
+  <ul class="mm-links">
+    <li><a href="#/about">About</a></li>
+    <li><a href="#/impact">Impact</a></li>
+    <li><a href="#/model-un">Model UN</a></li>
+    <li><a href="#/public-speaking">Public Speaking</a></li>
+    <li><a href="#/achievements">Achievements</a></li>
+    <li><a href="#/people">People</a></li>
+    <li><a href="#/gallery">Gallery</a></li>
+  </ul>
+  <a href="#/join" class="mm-cta">Join the Future &#8594;</a>
+</div>
+
+<nav id="nav">
+  <div class="nav-inner">
+    <a href="#/" class="nav-brand" data-cursor="link">
+      <span class="mark">MANGO</span>
+      <span class="sub">MODERN ADVOCATES FOR NEW GLOBAL OPINIONS</span>
+    </a>
+    <ul class="nav-links" id="nav-links">
+      <li><a href="#/about" data-cursor="link">About</a></li>
+      <li><a href="#/impact" data-cursor="link">Impact</a></li>
+      <li><a href="#/model-un" data-cursor="link">Model UN</a></li>
+      <li><a href="#/public-speaking" data-cursor="link">Public Speaking</a></li>
+      <li><a href="#/achievements" data-cursor="link">Achievements</a></li>
+      <li><a href="#/people" data-cursor="link">People</a></li>
+      <li><a href="#/gallery" data-cursor="link">Gallery</a></li>
+    </ul>
+    <a href="#/join" class="nav-cta" data-cursor="button">Join the Future &#8594;</a>
+    <button class="nav-burger" id="burger-btn" data-cursor="button"><span></span><span></span><span></span></button>
+  </div>
+</nav>
+
+<main>
+
+<!-- ============================================================ HOME ============================================================ -->
+<section class="page" data-page="home">
+
+  <section class="hero">
+    <div class="hero-canvas-holder"><canvas id="hero-canvas"></canvas></div>
+    <div class="hero-fade"></div>
+    <span class="hero-coord" style="top:24%; left:8%;">40.7&deg;N 74.0&deg;W</span>
+    <span class="hero-coord" style="top:66%; right:34%;">51.5&deg;N 0.1&deg;W</span>
+    <span class="hero-coord" style="top:40%; right:10%;">35.6&deg;N 139.6&deg;E</span>
+    <div class="wrap hero-body">
+      <div class="hero-grid">
+        <div>
+          <div class="hero-kicker">Student-Led &middot; Model United Nations &middot; Public Speaking</div>
+          <div class="hero-mark">MANGO</div>
+          <div class="hero-lines">
+            <span class="l1">MODERN ADVOCATES FOR</span>
+            <span class="l2"><em>NEW GLOBAL OPINIONS.</em></span>
+          </div>
+          <p class="hero-sub">Developing the next generation of speakers, diplomats, advocates, and leaders.</p>
+          <div class="hero-actions">
+            <a href="#/impact" class="btn btn-solid" data-cursor="button">Explore Our Impact &#8594;</a>
+            <a href="#/join" class="btn btn-ghost" data-cursor="button">Join the Future &#8594;</a>
+          </div>
+        </div>
+        <div class="hero-hud">
+          <div class="hud-label">Live Process Feed</div>
+          <div class="hud-line" id="hud-line">RESEARCH</div>
+        </div>
+      </div>
+    </div>
+    <div class="hero-marquee">
+      <div class="mq-track">
+        <span>MODEL UNITED NATIONS</span><span>PUBLIC SPEAKING</span><span>DIPLOMACY</span><span>ADVOCACY</span><span>LEADERSHIP</span><span>GLOBAL PERSPECTIVE</span>
+        <span>MODEL UNITED NATIONS</span><span>PUBLIC SPEAKING</span><span>DIPLOMACY</span><span>ADVOCACY</span><span>LEADERSHIP</span><span>GLOBAL PERSPECTIVE</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="statement">
+    <div class="wrap statement-text" data-reveal-words>
+      <span class="statement-line" data-line="1">THE WORLD IS FULL OF OPINIONS.</span>
+      <span class="statement-line" data-line="2">WE TEACH YOU HOW TO MAKE YOURS MATTER.</span>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <div class="eyebrow">By The Numbers</div>
+        <h2>Built by students.<br>Backed by results.</h2>
+      </div>
+      <div class="stat-grid">
+        <div class="stat" data-reveal><span class="num tabular" data-count="0">0</span><div class="label">Members</div></div>
+        <div class="stat" data-reveal><span class="num tabular" data-count="0">0</span><div class="label">Conferences</div></div>
+        <div class="stat" data-reveal><span class="num tabular" data-count="0">0</span><div class="label">Awards</div></div>
+        <div class="stat" data-reveal><span class="num tabular" data-count="0">0</span><div class="label">Delegates</div></div>
+        <div class="stat" data-reveal><span class="num tabular" data-count="0">0</span><div class="label">Speeches</div></div>
+        <div class="stat" data-reveal><span class="num tabular" data-count="0">0</span><div class="label">Years Active</div></div>
+      </div>
+      <div class="stat-note">Sample figures shown for layout &mdash; replace with verified MANGO statistics.</div>
+      <div style="margin-top:34px;"><a href="#/impact" class="btn btn-ghost" data-cursor="button">View Full Impact Report &#8594;</a></div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <div class="eyebrow">What We Do</div>
+        <h2>Three disciplines.<br>One voice.</h2>
+      </div>
+      <div class="panels">
+        <a class="panel p-mun" href="#/model-un" data-reveal data-cursor="link">
+          <canvas class="panel-bg" id="panel-map-canvas"></canvas>
+          <div class="panel-num">01</div>
+          <h3>Model UN</h3>
+          <p>Research a country, represent its interests, and negotiate real resolutions.</p>
+          <div class="plink">Learn More &#8594;</div>
+        </a>
+        <a class="panel p-speak" href="#/public-speaking" data-reveal data-cursor="link">
+          <canvas class="panel-bg" id="panel-wave-canvas"></canvas>
+          <div class="panel-num">02</div>
+          <h3>Public Speaking</h3>
+          <p>Build the rhetoric, presence, and confidence to hold any room.</p>
+          <div class="plink">Learn More &#8594;</div>
+        </a>
+        <a class="panel p-lead" href="#/about" data-reveal data-cursor="link">
+          <div class="panel-bg panel-bars" id="panel-bars"></div>
+          <div class="panel-num">03</div>
+          <h3>Leadership</h3>
+          <p>Turn informed opinions into influence, on and off the conference floor.</p>
+          <div class="plink">Learn More &#8594;</div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section class="block-tight">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <div class="eyebrow">Our Impact</div>
+        <h2>Proof, not promises.</h2>
+      </div>
+      <div style="margin-top:10px;">
+        <div class="wall-item" data-reveal><span class="wi-idx">01</span><h3>BEST DELEGATE<span class="wi-sub">[Conference Name]</span></h3><span class="wi-year">[YEAR]</span></div>
+        <div class="wall-item" data-reveal><span class="wi-idx">02</span><h3>OUTSTANDING DELEGATE<span class="wi-sub">[Conference Name]</span></h3><span class="wi-year">[YEAR]</span></div>
+        <div class="wall-item" data-reveal><span class="wi-idx">03</span><h3>BEST SPEAKER<span class="wi-sub">[Tournament Name]</span></h3><span class="wi-year">[YEAR]</span></div>
+      </div>
+      <div style="margin-top:34px;"><a href="#/achievements" class="btn btn-ghost" data-cursor="button">View All Impact &#8594;</a></div>
+    </div>
+  </section>
+
+  <section class="block" style="text-align:center;">
+    <div class="wrap">
+      <div class="eyebrow" style="justify-content:center;" data-reveal>Featured Achievement</div>
+      <div style="margin-top:20px;" data-reveal="scale">
+        <h2 style="font-size:clamp(44px,9vw,130px); line-height:0.9;">BEST<br>DELEGATE</h2>
+        <p style="margin-top:20px; font-family:var(--f-display); font-weight:600; font-size:clamp(20px,3vw,30px); color:var(--paper-dim);">[Conference Name] &mdash; [YEAR]</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block-tight">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <div class="eyebrow">Gallery</div>
+        <h2>Inside the room.</h2>
+      </div>
+      <div class="strip">
+        <div class="strip-tile" data-cursor="image"><span>[Photo] Conference Floor</span></div>
+        <div class="strip-tile" data-cursor="image"><span>[Photo] Delegate Speaking</span></div>
+        <div class="strip-tile" data-cursor="image"><span>[Photo] Awards Night</span></div>
+        <div class="strip-tile" data-cursor="image"><span>[Photo] Team Photo</span></div>
+        <div class="strip-tile" data-cursor="image"><span>[Photo] Workshop</span></div>
+      </div>
+      <div style="margin-top:24px;"><a href="#/gallery" class="btn btn-ghost" data-cursor="button">View Full Gallery &#8594;</a></div>
+    </div>
+  </section>
+
+  <section class="quote-block">
+    <div class="wrap" data-reveal-words>
+      <q class="statement-line" data-line="1">YOUR VOICE HAS A PLACE IN THE WORLD.</q>
+    </div>
+  </section>
+
+  <section class="block" style="text-align:center; border-top:1px solid var(--rule);">
+    <div class="wrap">
+      <div class="eyebrow" style="justify-content:center;" data-reveal>Get Involved</div>
+      <h2 data-reveal style="margin-top:16px; font-size:clamp(34px,6vw,72px);">MANGO isn't just a club.<br>It's preparing the people who<br>will shape tomorrow's conversations.</h2>
+      <div style="margin-top:34px;" data-reveal><a href="#/join" class="btn btn-solid" data-cursor="button">Join the Future &#8594;</a></div>
+    </div>
+  </section>
+
+</section>
+
+<!-- ============================================================ IMPACT ============================================================ -->
+<section class="page" data-page="impact">
+
+  <section class="hero-plain wrap">
+    <div class="eyebrow" data-reveal>Our Impact</div>
+    <h1 data-reveal>OUR IMPACT</h1>
+    <div class="stack" data-reveal>
+      <span>WHAT WE'VE BUILT.</span>
+      <span>WHAT WE'VE ACHIEVED.</span>
+      <span>WHERE WE'RE GOING.</span>
+    </div>
+  </section>
+
+  <section class="block-tight">
+    <div class="wrap">
+      <div class="stat-grid">
+        <div class="stat" data-reveal><span class="num tabular" data-count="0">0</span><div class="label">Members</div></div>
+        <div class="stat" data-reveal><span class="num tabular" data-count="0">0</span><div class="label">Conferences</div></div>
+        <div class="stat" data-reveal><span class="num tabular" data-count="0">0</span><div class="label">Awards</div></div>
+        <div class="stat" data-reveal><span class="num tabular" data-count="0">0</span><div class="label">Events</div></div>
+        <div class="stat" data-reveal><span class="num tabular" data-count="0">0</span><div class="label">Delegates</div></div>
+        <div class="stat" data-reveal><span class="num tabular" data-count="0">0</span><div class="label">Years Active</div></div>
+      </div>
+      <div class="stat-note">Sample figures shown for layout &mdash; replace with verified MANGO statistics.</div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="wrap">
+      <div class="section-head" data-reveal><div class="eyebrow">History</div><h2>How we got here.</h2></div>
+      <div class="tl-wrap" data-timeline="impact">
+        <div class="tl-spine"><div class="tl-spine-fill" data-tl-fill></div></div>
+        <div class="tl-item" data-reveal><div class="tl-dot"></div><div class="tl-year">[YEAR]</div><h3>MANGO Founded</h3><span class="tl-tag">Organizational Milestone</span><p>[Short description of how and why MANGO was founded.]</p></div>
+        <div class="tl-item" data-reveal><div class="tl-dot"></div><div class="tl-year">[YEAR]</div><h3>[Conference Name]</h3><span class="tl-tag">First Conference</span><p>[Short description of the achievement and what it involved.]</p></div>
+        <div class="tl-item" data-reveal><div class="tl-dot"></div><div class="tl-year">[YEAR]</div><h3>[Milestone]</h3><span class="tl-tag">Growth</span><p>[Short description of the achievement and what it involved.]</p></div>
+        <div class="tl-item" data-reveal><div class="tl-dot"></div><div class="tl-year">[YEAR]</div><h3>[Award / Recognition]</h3><span class="tl-tag">Recognition</span><p>[Short description of the achievement and what it involved.]</p></div>
+        <div class="tl-item" data-reveal><div class="tl-dot"></div><div class="tl-year">[YEAR]</div><h3>[Partnership]</h3><span class="tl-tag">Partnership</span><p>[Short description of the achievement and what it involved.]</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="wrap">
+      <div class="section-head" data-reveal><div class="eyebrow">Achievement Wall</div><h2>Proof, not promises.</h2></div>
+      <div style="margin-top:10px;">
+        <div class="wall-item is-featured" data-reveal><span class="wi-idx">01</span><h3>BEST DELEGATE<span class="wi-sub">[Conference Name]</span></h3><span class="wi-year">[YEAR]</span></div>
+        <div class="wall-item" data-reveal><span class="wi-idx">02</span><h3>OUTSTANDING DELEGATE<span class="wi-sub">[Conference Name]</span></h3><span class="wi-year">[YEAR]</span></div>
+        <div class="wall-item" data-reveal><span class="wi-idx">03</span><h3>VERBAL COMMENDATION<span class="wi-sub">[Conference Name]</span></h3><span class="wi-year">[YEAR]</span></div>
+        <div class="wall-item" data-reveal><span class="wi-idx">04</span><h3>BEST SPEAKER<span class="wi-sub">[Tournament Name]</span></h3><span class="wi-year">[YEAR]</span></div>
+      </div>
+      <div style="margin-top:30px;"><a href="#/achievements" class="btn btn-ghost" data-cursor="button">View Full Trophy Room &#8594;</a></div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="wrap">
+      <div class="section-head" data-reveal><div class="eyebrow">Impact Stories</div><h2>Beyond the numbers.</h2></div>
+      <div style="margin-top:10px;">
+        <div class="story" data-reveal>
+          <div class="story-img"><span>[ PHOTO ]</span></div>
+          <div>
+            <div class="story-year">[YEAR] &mdash; [Conference Name]</div>
+            <h3>[Headline describing what happened]</h3>
+            <span class="s-label">What Happened</span>
+            <p class="s-what">[Description of the event, the challenge, and how the team approached it.]</p>
+            <span class="s-label">Why It Mattered</span>
+            <p class="s-why">[Description of the impact this had on the delegate, the team, or MANGO as a whole.]</p>
+          </div>
+        </div>
+        <div class="story" data-reveal>
+          <div class="story-img"><span>[ PHOTO ]</span></div>
+          <div>
+            <div class="story-year">[YEAR] &mdash; [Event Name]</div>
+            <h3>[Headline describing what happened]</h3>
+            <span class="s-label">What Happened</span>
+            <p class="s-what">[Description of the event, the challenge, and how the team approached it.]</p>
+            <span class="s-label">Why It Mattered</span>
+            <p class="s-why">[Description of the impact this had on the delegate, the team, or MANGO as a whole.]</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</section>
+
+<!-- ============================================================ MODEL UN ============================================================ -->
+<section class="page" data-page="model-un">
+
+  <section class="hero-plain wrap">
+    <div class="eyebrow" data-reveal>Model United Nations</div>
+    <h1 data-reveal>ENTER THE ROOM.</h1>
+    <div class="stack" data-reveal>
+      <span>RESEARCH.</span><span>REPRESENT.</span><span>NEGOTIATE.</span><span>LEAD.</span>
+    </div>
+    <p class="lead" data-reveal>Research a country. Understand its interests. Represent its perspective. Negotiate with people who may disagree. Then defend your position.</p>
+  </section>
+
+  <div class="journey-wrap">
+    <div class="journey-sticky">
+      <div class="journey-index"><span data-journey-index>01</span> / <span data-journey-total>06</span></div>
+      <div class="journey-track" data-journey-track>
+        <div class="journey-stage"><div class="jn">01</div><h3>RESEARCH</h3><p>Understand the country, the bloc, and the issue before you ever speak.</p></div>
+        <div class="journey-stage"><div class="jn">02</div><h3>REPRESENT</h3><p>Step into a perspective that may not be your own and argue it faithfully.</p></div>
+        <div class="journey-stage"><div class="jn">03</div><h3>NEGOTIATE</h3><p>Find common ground with delegates whose interests conflict with yours.</p></div>
+        <div class="journey-stage"><div class="jn">04</div><h3>COLLABORATE</h3><p>Build coalitions and draft language that a divided room can agree on.</p></div>
+        <div class="journey-stage"><div class="jn">05</div><h3>RESOLVE</h3><p>Turn debate into a resolution that actually holds up to scrutiny.</p></div>
+        <div class="journey-stage"><div class="jn">06</div><h3>LEAD</h3><p>Carry what you've learned about persuasion and diplomacy beyond the floor.</p></div>
+      </div>
+      <div class="journey-progress"><div class="journey-progress-bar" data-journey-bar></div></div>
+    </div>
+  </div>
+
+  <section class="block">
+    <div class="wrap">
+      <div class="section-head" data-reveal><div class="eyebrow">Global Network</div><h2>Every seat is a perspective.</h2></div>
+      <div data-reveal style="margin-top:40px;">
+        <div class="map-box">
+          <canvas id="map-canvas"></canvas>
+          <div class="map-hub" style="left:23%;top:38%;" data-city="WASHINGTON" data-geo="38.9&deg;N 77.0&deg;W"></div>
+          <div class="map-hub" style="left:49%;top:29%;" data-city="BRUSSELS" data-geo="50.8&deg;N 4.3&deg;E"></div>
+          <div class="map-hub" style="left:50%;top:31%;" data-city="GENEVA" data-geo="46.2&deg;N 6.1&deg;E"></div>
+          <div class="map-hub" style="left:57%;top:58%;" data-city="NAIROBI" data-geo="1.3&deg;S 36.8&deg;E"></div>
+          <div class="map-hub" style="left:68%;top:43%;" data-city="NEW DELHI" data-geo="28.6&deg;N 77.2&deg;E"></div>
+          <div class="map-hub" style="left:83%;top:36%;" data-city="TOKYO" data-geo="35.7&deg;N 139.7&deg;E"></div>
+          <div class="map-tip" id="map-tip"></div>
+        </div>
+        <div class="map-caption">Abstract network &mdash; illustrative coordinates, not MANGO chapter locations.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="wrap">
+      <div class="section-head" data-reveal><div class="eyebrow">What A Delegate Learns</div><h2>Skills that outlast the conference.</h2></div>
+      <div class="tag-list" data-reveal style="margin-top:36px;">
+        <span>Research</span><span>Diplomacy</span><span>Negotiation</span><span>Public Speaking</span><span>Critical Thinking</span><span>Leadership</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="wrap">
+      <div class="section-head" data-reveal><div class="eyebrow">Conference Experience</div><h2>Inside the committee room.</h2></div>
+      <div class="gallery-grid" style="grid-auto-rows:160px;">
+        <div class="g-tile g1" data-cursor="image" data-reveal><div class="g-photo"></div><div class="g-idx">01</div><div class="g-info">[Photo] Committee Session</div></div>
+        <div class="g-tile g2" data-cursor="image" data-reveal><div class="g-photo"></div><div class="g-idx">02</div><div class="g-info">[Photo] Caucus</div></div>
+        <div class="g-tile g3" data-cursor="image" data-reveal><div class="g-photo"></div><div class="g-idx">03</div><div class="g-info">[Photo] Resolution Draft</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block-tight">
+    <div class="wrap">
+      <div class="section-head" data-reveal><div class="eyebrow">Model UN Achievements</div><h2>Where our delegates have placed.</h2></div>
+      <div style="margin-top:10px;">
+        <div class="wall-item" data-reveal><span class="wi-idx">01</span><h3>BEST DELEGATE<span class="wi-sub">[Conference Name]</span></h3><span class="wi-year">[YEAR]</span></div>
+        <div class="wall-item" data-reveal><span class="wi-idx">02</span><h3>OUTSTANDING DELEGATE<span class="wi-sub">[Conference Name]</span></h3><span class="wi-year">[YEAR]</span></div>
+      </div>
+      <div style="margin-top:30px;"><a href="#/achievements/model-un" class="btn btn-ghost" data-cursor="button">View All MUN Achievements &#8594;</a></div>
+    </div>
+  </section>
+
+</section>
+
+<!-- ============================================================ PUBLIC SPEAKING ============================================================ -->
+<section class="page" data-page="public-speaking">
+
+  <section class="hero-plain wrap">
+    <div class="eyebrow" data-reveal>Public Speaking</div>
+    <h1 data-reveal>FIND YOUR VOICE.<br>MAKE IT UNMISSABLE.</h1>
+  </section>
+
+  <section class="block-tight">
+    <div class="wrap">
+      <div class="tag-list" data-reveal>
+        <span>Public Speaking</span><span>Persuasion</span><span>Rhetoric</span><span>Impromptu Speaking</span><span>Presentation</span><span>Confidence</span><span>Critical Thinking</span>
+      </div>
+      <div class="wave-box" data-reveal style="margin-top:40px;">
+        <canvas id="wave-canvas"></canvas>
+        <div class="wave-caption">Move your cursor across the waveform.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="wrap">
+      <div class="section-head" data-reveal><div class="eyebrow">The Progression</div><h2>From nervous to unmissable.</h2></div>
+      <div class="arrow-row" data-reveal>
+        <span>SPEAK</span><span class="arrow">&#8594;</span>
+        <span>PERSUADE</span><span class="arrow">&#8594;</span>
+        <span>RESPOND</span><span class="arrow">&#8594;</span>
+        <span>LEAD</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="quote-block">
+    <div class="wrap" data-reveal-words>
+      <q class="statement-line" data-line="1">THE BEST IDEA IN THE ROOM MEANS NOTHING IF YOU CAN'T COMMUNICATE IT.</q>
+    </div>
+  </section>
+
+</section>
+
+<!-- ============================================================ ABOUT ============================================================ -->
+<section class="page" data-page="about">
+
+  <section class="hero-plain wrap">
+    <div class="eyebrow" data-reveal>About</div>
+    <h1 data-reveal>A PLACE TO<br>THINK OUT LOUD.</h1>
+    <p class="lead" data-reveal>MANGO exists because young people already have opinions worth hearing &mdash; what they often lack is the room, the research skills, and the confidence to make those opinions land. We built that room.</p>
+  </section>
+
+  <section class="block">
+    <div class="wrap">
+      <div class="section-head" data-reveal><div class="eyebrow">The Name</div><h2>What MANGO stands for.</h2></div>
+      <div style="margin-top:20px;">
+        <div class="acc-row" data-acc><div class="acc-head"><span class="ch">M</span><span class="word">Modern</span><span class="plus">+</span></div><div class="acc-def"><p>Preparing students to engage with the issues shaping today's world.</p></div></div>
+        <div class="acc-row" data-acc><div class="acc-head"><span class="ch">A</span><span class="word">Advocates</span><span class="plus">+</span></div><div class="acc-def"><p>Developing the confidence to communicate ideas and stand behind them.</p></div></div>
+        <div class="acc-row" data-acc><div class="acc-head"><span class="ch">N</span><span class="word">New</span><span class="plus">+</span></div><div class="acc-def"><p>Encouraging curiosity, innovation, and perspectives beyond conventional thinking.</p></div></div>
+        <div class="acc-row" data-acc><div class="acc-head"><span class="ch">G</span><span class="word">Global</span><span class="plus">+</span></div><div class="acc-def"><p>Understanding issues through international perspectives.</p></div></div>
+        <div class="acc-row" data-acc><div class="acc-head"><span class="ch">O</span><span class="word">Opinions</span><span class="plus">+</span></div><div class="acc-def"><p>Building informed perspectives and learning how to communicate them effectively.</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="wrap">
+      <div class="section-head" data-reveal><div class="eyebrow">Mission, Vision, Values</div><h2>What drives us.</h2></div>
+      <div class="mvv">
+        <div class="mvv-item" data-reveal><div class="eyebrow">Mission</div><p>To give students the research skills, rhetorical confidence, and diplomatic judgment to turn opinions into informed, persuasive advocacy.</p></div>
+        <div class="mvv-item" data-reveal><div class="eyebrow">Vision</div><p>A generation of young people who engage with global issues critically, communicate them clearly, and lead conversations that matter.</p></div>
+        <div class="mvv-item" data-reveal><div class="eyebrow">Values</div><p>Curiosity, rigor, respect for perspectives unlike our own, and the discipline to back opinions with research.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="quote-block">
+    <div class="wrap">
+      <div class="eyebrow" style="justify-content:center;" data-reveal>Our Philosophy</div>
+      <div data-reveal-words style="margin-top:20px;">
+        <q class="statement-line" data-line="1">DIFFERENT PERSPECTIVES DON'T WEAKEN A CONVERSATION.</q>
+        <q class="statement-line" data-line="2">THEY MAKE IT WORTH HAVING.</q>
+      </div>
+      <p class="lead" data-reveal style="max-width:60ch; margin:26px auto 0;">Every delegate MANGO trains has to argue a position they may not personally hold. That discipline &mdash; understanding an opposing view well enough to represent it &mdash; is the foundation of everything we teach.</p>
+    </div>
+  </section>
+
+</section>
+
+<!-- ============================================================ PEOPLE ============================================================ -->
+<section class="page" data-page="people">
+
+  <section class="hero-plain wrap">
+    <div class="eyebrow" data-reveal>Our People</div>
+    <h1 data-reveal>THE PEOPLE BEHIND<br>THE VOICES.</h1>
+  </section>
+
+  <section class="block">
+    <div class="wrap">
+
+      <div class="people-cat" data-reveal>
+        <h3>Founders</h3>
+        <div class="people-grid">
+          <div class="person" data-cursor="image"><div class="person-photo"></div><div class="person-info"><div class="p-name">[Member Name]</div><div class="p-role">Founder</div><div class="p-bio">[Short bio &mdash; grade, focus area, what they started MANGO to do.]</div></div></div>
+          <div class="person" data-cursor="image"><div class="person-photo"></div><div class="person-info"><div class="p-name">[Member Name]</div><div class="p-role">Co-Founder</div><div class="p-bio">[Short bio &mdash; grade, focus area, what they started MANGO to do.]</div></div></div>
+        </div>
+      </div>
+
+      <div class="people-cat" data-reveal>
+        <h3>Executive Board</h3>
+        <div class="people-grid">
+          <div class="person" data-cursor="image"><div class="person-photo"></div><div class="person-info"><div class="p-name">[Member Name]</div><div class="p-role">President</div><div class="p-bio">[Short bio.]</div></div></div>
+          <div class="person" data-cursor="image"><div class="person-photo"></div><div class="person-info"><div class="p-name">[Member Name]</div><div class="p-role">Vice President</div><div class="p-bio">[Short bio.]</div></div></div>
+          <div class="person" data-cursor="image"><div class="person-photo"></div><div class="person-info"><div class="p-name">[Member Name]</div><div class="p-role">Secretary-General</div><div class="p-bio">[Short bio.]</div></div></div>
+          <div class="person" data-cursor="image"><div class="person-photo"></div><div class="person-info"><div class="p-name">[Member Name]</div><div class="p-role">Treasurer</div><div class="p-bio">[Short bio.]</div></div></div>
+        </div>
+      </div>
+
+      <div class="people-cat" data-reveal>
+        <h3>Officers</h3>
+        <div class="people-grid">
+          <div class="person" data-cursor="image"><div class="person-photo"></div><div class="person-info"><div class="p-name">[Member Name]</div><div class="p-role">Head Delegate</div><div class="p-bio">[Short bio.]</div></div></div>
+          <div class="person" data-cursor="image"><div class="person-photo"></div><div class="person-info"><div class="p-name">[Member Name]</div><div class="p-role">Public Speaking Chair</div><div class="p-bio">[Short bio.]</div></div></div>
+        </div>
+      </div>
+
+      <div class="people-cat" data-reveal>
+        <h3>Coaches &amp; Advisors</h3>
+        <div class="people-grid">
+          <div class="person" data-cursor="image"><div class="person-photo"></div><div class="person-info"><div class="p-name">[Faculty Name]</div><div class="p-role">Faculty Advisor</div><div class="p-bio">[Short bio.]</div></div></div>
+        </div>
+      </div>
+
+      <div class="people-cat" data-reveal>
+        <h3>Members</h3>
+        <div class="people-grid">
+          <div class="person" data-cursor="image"><div class="person-photo"></div><div class="person-info"><div class="p-name">[Member Name]</div><div class="p-role">Member</div><div class="p-bio">[Short bio.]</div></div></div>
+          <div class="person" data-cursor="image"><div class="person-photo"></div><div class="person-info"><div class="p-name">[Member Name]</div><div class="p-role">Member</div><div class="p-bio">[Short bio.]</div></div></div>
+          <div class="person" data-cursor="image"><div class="person-photo"></div><div class="person-info"><div class="p-name">[Member Name]</div><div class="p-role">Member</div><div class="p-bio">[Short bio.]</div></div></div>
+          <div class="person" data-cursor="image"><div class="person-photo"></div><div class="person-info"><div class="p-name">+ Many More</div><div class="p-role">Member</div><div class="p-bio">Full roster available on request.</div></div></div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+</section>
+
+<!-- ============================================================ ACHIEVEMENTS ============================================================ -->
+<section class="page" data-page="achievements">
+
+  <section class="hero-plain wrap">
+    <div class="eyebrow" data-reveal>Achievements</div>
+    <h1 data-reveal>PROOF, NOT<br>PROMISES.</h1>
+  </section>
+
+  <section class="block-tight">
+    <div class="wrap">
+      <div class="filter-bar" id="ach-filters">
+        <button data-filter="all" class="is-active">All</button>
+        <button data-filter="model-un">Model UN</button>
+        <button data-filter="public-speaking">Public Speaking</button>
+        <button data-filter="leadership">Leadership</button>
+        <button data-filter="other">Other</button>
+      </div>
+
+      <div class="wall-item is-featured" data-reveal><span class="wi-idx">&#9733;</span><h3>BEST DELEGATE<span class="wi-sub">[Conference Name]</span></h3><span class="wi-year">[YEAR]</span></div>
+
+      <div id="ach-list" style="margin-top:10px;">
+        <div class="ach-row" data-category="model-un" data-reveal>
+          <div class="ar-swatch"><span>[PHOTO]</span></div>
+          <div><h3>Outstanding Delegate</h3><div class="ar-sub">[Conference Name]</div><div class="ar-meta">[Delegate Name / Team]</div><span class="ar-tag">Model UN</span></div>
+          <div class="ar-year">[YEAR]</div>
+        </div>
+        <div class="ach-row" data-category="public-speaking" data-reveal>
+          <div class="ar-swatch"><span>[PHOTO]</span></div>
+          <div><h3>Best Speaker</h3><div class="ar-sub">[Tournament Name]</div><div class="ar-meta">[Speaker Name]</div><span class="ar-tag">Public Speaking</span></div>
+          <div class="ar-year">[YEAR]</div>
+        </div>
+        <div class="ach-row" data-category="model-un" data-reveal>
+          <div class="ar-swatch"><span>[PHOTO]</span></div>
+          <div><h3>Verbal Commendation</h3><div class="ar-sub">[Conference Name]</div><div class="ar-meta">[Delegate Name]</div><span class="ar-tag">Model UN</span></div>
+          <div class="ar-year">[YEAR]</div>
+        </div>
+        <div class="ach-row" data-category="leadership" data-reveal>
+          <div class="ar-swatch"><span>[PHOTO]</span></div>
+          <div><h3>Chapter Leadership Award</h3><div class="ar-sub">[Awarding Body]</div><div class="ar-meta">[Member Name]</div><span class="ar-tag">Leadership</span></div>
+          <div class="ar-year">[YEAR]</div>
+        </div>
+        <div class="ach-row" data-category="other" data-reveal>
+          <div class="ar-swatch"><span>[PHOTO]</span></div>
+          <div><h3>Community Partnership</h3><div class="ar-sub">[Organization Name]</div><div class="ar-meta">MANGO Chapter</div><span class="ar-tag">Other</span></div>
+          <div class="ar-year">[YEAR]</div>
+        </div>
+        <div class="ach-row" data-category="public-speaking" data-reveal>
+          <div class="ar-swatch"><span>[PHOTO]</span></div>
+          <div><h3>Impromptu Speaking Finalist</h3><div class="ar-sub">[Tournament Name]</div><div class="ar-meta">[Speaker Name]</div><span class="ar-tag">Public Speaking</span></div>
+          <div class="ar-year">[YEAR]</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</section>
+
+<!-- ============================================================ GALLERY ============================================================ -->
+<section class="page" data-page="gallery">
+
+  <section class="hero-plain wrap">
+    <div class="eyebrow" data-reveal>Gallery</div>
+    <h1 data-reveal>THE PHOTO<br>EXPERIENCE.</h1>
+  </section>
+
+  <section class="block-tight">
+    <div class="wrap">
+      <div class="filter-bar" id="gallery-filters">
+        <button data-filter="all" class="is-active">All</button>
+        <button data-filter="conferences">Conferences</button>
+        <button data-filter="model-un">Model UN</button>
+        <button data-filter="public-speaking">Public Speaking</button>
+        <button data-filter="team">Team</button>
+        <button data-filter="events">Events</button>
+        <button data-filter="awards">Awards</button>
+      </div>
+
+      <div class="gallery-grid">
+        <div class="g-tile g1" data-category="conferences" data-cursor="image" data-reveal><div class="g-photo"></div><div class="g-idx">01</div><div class="g-info">[Photo] Conference Floor</div></div>
+        <div class="g-tile g2" data-category="model-un" data-cursor="image" data-reveal><div class="g-photo"></div><div class="g-idx">02</div><div class="g-info">[Photo] Delegate Speaking</div></div>
+        <div class="g-tile g3" data-category="awards" data-cursor="image" data-reveal><div class="g-photo"></div><div class="g-idx">03</div><div class="g-info">[Photo] Awards</div></div>
+        <div class="g-tile g4" data-category="team" data-cursor="image" data-reveal><div class="g-photo"></div><div class="g-idx">04</div><div class="g-info">[Photo] Group Photo</div></div>
+        <div class="g-tile g5" data-category="events" data-cursor="image" data-reveal><div class="g-photo"></div><div class="g-idx">05</div><div class="g-info">[Photo] Workshop</div></div>
+        <div class="g-tile g6" data-category="model-un" data-cursor="image" data-reveal><div class="g-photo"></div><div class="g-idx">06</div><div class="g-info">[Photo] Committee Session</div></div>
+        <div class="g-tile g7" data-category="public-speaking" data-cursor="image" data-reveal><div class="g-photo"></div><div class="g-idx">07</div><div class="g-info">[Photo] Public Speaking Event</div></div>
+        <div class="g-tile g8" data-category="team" data-cursor="image" data-reveal><div class="g-photo"></div><div class="g-idx">08</div><div class="g-info">[Photo] Leadership</div></div>
+        <div class="g-tile g9" data-category="events" data-cursor="image" data-reveal><div class="g-photo"></div><div class="g-idx">09</div><div class="g-info">[Photo] Meeting</div></div>
+        <div class="g-tile g10" data-category="conferences" data-cursor="image" data-reveal><div class="g-photo"></div><div class="g-idx">10</div><div class="g-info">[Photo] Closing Ceremony</div></div>
+      </div>
+    </div>
+  </section>
+
+</section>
+
+<!-- ============================================================ JOIN ============================================================ -->
+<section class="page" data-page="join">
+
+  <section class="hero-plain wrap">
+    <div class="eyebrow" data-reveal>Get Involved</div>
+    <h1 data-reveal>JOIN THE FUTURE</h1>
+    <p class="lead" data-reveal>YOUR VOICE IS ALREADY POWERFUL. NOW LEARN HOW TO USE IT.</p>
+  </section>
+
+  <section class="block-tight">
+    <div class="wrap">
+      <div class="section-head" data-reveal><div class="eyebrow">Who Should Join</div><h2>If any of this sounds like you.</h2></div>
+      <div class="tag-list" data-reveal style="margin-top:30px;">
+        <span>Model UN</span><span>Public Speaking</span><span>Debate</span><span>Global Affairs</span><span>Leadership</span><span>Advocacy</span><span>Communication</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="wrap">
+      <div class="section-head" data-reveal><div class="eyebrow">Application</div><h2>Tell us about yourself.</h2></div>
+
+      <form id="join-form" data-reveal>
+        <div class="form-grid">
+          <div class="field"><label for="jf-name">Name</label><input id="jf-name" name="name" type="text" required></div>
+          <div class="field"><label for="jf-email">Email</label><input id="jf-email" name="email" type="email" required></div>
+          <div class="field"><label for="jf-school">School</label><input id="jf-school" name="school" type="text" required></div>
+          <div class="field"><label for="jf-grade">Grade</label>
+            <select id="jf-grade" name="grade" required>
+              <option value="" disabled selected>Select grade</option>
+              <option>9th Grade</option><option>10th Grade</option><option>11th Grade</option><option>12th Grade</option><option>Other</option>
+            </select>
+          </div>
+          <div class="field full"><label for="jf-interest">Interest</label>
+            <select id="jf-interest" name="interest" required>
+              <option value="" disabled selected>Select interest</option>
+              <option>Model UN</option><option>Public Speaking</option><option>Debate</option><option>Leadership</option><option>Not sure yet</option>
+            </select>
+          </div>
+          <div class="field full"><label for="jf-why">Why do you want to join?</label><textarea id="jf-why" name="why" required></textarea></div>
+        </div>
+        <div class="form-submit"><button type="submit" class="btn btn-solid" data-cursor="button">Join the Future &#8594;</button></div>
+        <div class="form-note">This form is structured for future connection to MANGO's application backend.</div>
+      </form>
+
+      <div class="form-success" id="join-success">
+        <h3>Thanks &mdash; your interest has been recorded on this device.</h3>
+        <p>This form is ready to connect to MANGO's real application backend (email, CRM, or form service) whenever it's wired up.</p>
+      </div>
+    </div>
+  </section>
+
+</section>
+
+</main>
+
+<footer id="footer">
+  <div class="wrap">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <div class="mark">MANGO</div>
+        <div class="sub">MODERN ADVOCATES FOR NEW GLOBAL OPINIONS</div>
+      </div>
+      <div class="footer-cols">
+        <div class="footer-col">
+          <h4>Explore</h4>
+          <ul>
+            <li><a href="#/about">About</a></li>
+            <li><a href="#/impact">Impact</a></li>
+            <li><a href="#/model-un">Model UN</a></li>
+            <li><a href="#/public-speaking">Public Speaking</a></li>
+            <li><a href="#/achievements">Achievements</a></li>
+            <li><a href="#/people">People</a></li>
+            <li><a href="#/gallery">Gallery</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Get Involved</h4>
+          <ul>
+            <li><a href="#/join">Join the Future</a></li>
+            <li><a href="#/join">Contact</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Social</h4>
+          <ul>
+            <li><a href="#">Instagram</a></li>
+            <li><a href="#">LinkedIn</a></li>
+            <li><a href="#">[email@mango.org]</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 MANGO. All rights reserved.</span>
+      <span>Modern Advocates for New Global Opinions</span>
+    </div>
+  </div>
+</footer>
+
+<div id="lightbox"><div class="lb-frame"><span id="lb-label">[ PHOTO ]</span></div><button class="lb-close" data-cursor="button">Close &#10005;</button></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ---------- CURSOR ---------- */
+var fine = window.matchMedia('(pointer:fine)').matches;
+var cursor = document.getElementById('cursor');
+if(fine){
+  document.body.classList.add('has-fine-cursor');
+  var cx=0,cy=0,tx=0,ty=0;
+  window.addEventListener('mousemove', function(e){ tx=e.clientX; ty=e.clientY; cursor.classList.remove('is-hidden'); });
+  document.addEventListener('mouseleave', function(){ cursor.classList.add('is-hidden'); });
+  (function raf(){ cx += (tx-cx)*0.22; cy += (ty-cy)*0.22; cursor.style.transform='translate('+cx+'px,'+cy+'px) translate(-50%,-50%)'; requestAnimationFrame(raf); })();
+  document.addEventListener('mouseover', function(e){
+    var img = e.target.closest('[data-cursor="image"]');
+    var btn = e.target.closest('[data-cursor="button"]');
+    var link = e.target.closest('[data-cursor="link"]');
+    cursor.classList.remove('is-link','is-image','is-button');
+    var tag = cursor.querySelector('.cursor-tag');
+    if(img){ cursor.classList.add('is-image'); tag.textContent='View'; }
+    else if(btn){ cursor.classList.add('is-button'); tag.textContent='Go'; }
+    else if(link){ cursor.classList.add('is-link'); tag.textContent=''; }
+  });
+  document.addEventListener('mouseout', function(e){
+    if(!e.relatedTarget || !(e.relatedTarget.closest && e.relatedTarget.closest('[data-cursor]'))){
+      cursor.classList.remove('is-link','is-image','is-button');
+    }
+  });
+} else { cursor.style.display='none'; }
+
+/* ---------- NAV SCROLL STATE ---------- */
+var nav = document.getElementById('nav');
+function onScrollNav(){ if(window.scrollY>40){ nav.classList.add('is-scrolled'); } else { nav.classList.remove('is-scrolled'); } }
+window.addEventListener('scroll', onScrollNav, {passive:true}); onScrollNav();
+
+/* ---------- MOBILE MENU ---------- */
+var mm = document.getElementById('mobile-menu');
+document.getElementById('burger-btn').addEventListener('click', function(){ mm.classList.add('is-open'); document.body.classList.add('menu-open'); });
+mm.querySelector('.mm-close').addEventListener('click', closeMenu);
+function closeMenu(){ mm.classList.remove('is-open'); document.body.classList.remove('menu-open'); }
+
+/* ---------- ROUTER ---------- */
+var pages = document.querySelectorAll('.page');
+var titles = {
+  home:'MANGO — Modern Advocates for New Global Opinions',
+  impact:'MANGO — Our Impact', 'model-un':'MANGO — Model UN', 'public-speaking':'MANGO — Public Speaking',
+  about:'MANGO — About', people:'MANGO — Our People', achievements:'MANGO — Achievements',
+  gallery:'MANGO — Gallery', join:'MANGO — Join the Future'
+};
+var routeToNavHref = { home:'#/', impact:'#/impact', 'model-un':'#/model-un', 'public-speaking':'#/public-speaking', about:'#/about', people:'#/people', achievements:'#/achievements', gallery:'#/gallery', join:'#/join' };
+
+function parseHash(){
+  var raw = location.hash.replace(/^#\/?/,'');
+  var parts = raw.split('/').filter(Boolean);
+  return { page: parts[0] || 'home', filter: parts[1] || null };
+}
+
+function setActiveNav(page){
+  document.querySelectorAll('.nav-links a, .mm-links a').forEach(function(a){
+    a.classList.toggle('is-active', a.getAttribute('href') === routeToNavHref[page]);
+  });
+}
+
+function route(){
+  var r = parseHash();
+  var page = titles[r.page] ? r.page : 'home';
+  pages.forEach(function(p){ p.classList.toggle('is-active', p.dataset.page===page); });
+  document.title = titles[page];
+  setActiveNav(page);
+  window.scrollTo(0,0);
+  closeMenu();
+  var activePage = document.querySelector('.page[data-page="'+page+'"]');
+  if(activePage){
+    activePage.querySelectorAll('canvas').forEach(function(c){
+      var reg = canvasRegistry[c.id];
+      if(reg){ reg.resize(); if(reg.init) reg.init(); }
+    });
+  }
+  if(page==='achievements' && r.filter){ applyFilter('ach-filters','ach-list-items', r.filter); }
+  if(page==='gallery' && r.filter){ applyFilter('gallery-filters','gallery-tiles', r.filter); }
+}
+
+/* intercept internal nav clicks for the cinematic transition */
+var overlay = document.getElementById('page-transition');
+document.addEventListener('click', function(e){
+  var a = e.target.closest('a[href^="#/"]');
+  if(!a) return;
+  e.preventDefault();
+  var target = a.getAttribute('href');
+  if(target === (location.hash || '#/')) return;
+  overlay.classList.add('is-covering');
+  setTimeout(function(){
+    location.hash = target;
+    overlay.classList.remove('is-covering');
+    overlay.classList.add('is-revealing');
+    setTimeout(function(){ overlay.classList.remove('is-revealing'); }, 320);
+  }, 300);
+});
+window.addEventListener('hashchange', route);
+
+/* ---------- GENERIC REVEAL (re-observes on route change) ---------- */
+var revealObs = new IntersectionObserver(function(entries){
+  entries.forEach(function(en){ if(en.isIntersecting){ en.target.classList.add('is-visible'); revealObs.unobserve(en.target); } });
+}, {threshold:0.16, rootMargin:'0px 0px -8% 0px'});
+function observeReveals(root){
+  root.querySelectorAll('[data-reveal], .tl-item, .wall-item, .g-tile, .person, .arrow-row, .ach-row').forEach(function(el){
+    if(!el.dataset.observed){ el.dataset.observed='1'; revealObs.observe(el); }
+  });
+}
+observeReveals(document);
+
+/* ---------- WORD REVEAL (statements/quotes) ---------- */
+(function(){
+  document.querySelectorAll('[data-reveal-words]').forEach(function(box){
+    var lines = box.querySelectorAll('.statement-line');
+    lines.forEach(function(line, li){
+      var words = line.textContent.trim().split(/\s+/);
+      line.innerHTML = words.map(function(w,i){ return '<span class="word" style="transition-delay:'+(i*45 + li*260)+'ms">'+w+'</span>'; }).join(' ');
+    });
+    var obs = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){
+        if(en.isIntersecting){ en.target.querySelectorAll('.word').forEach(function(w){ w.classList.add('is-on'); }); obs.unobserve(en.target); }
+      });
+    }, {threshold:0.4});
+    obs.observe(box);
+  });
+})();
+
+/* ---------- ACCORDION (About) ---------- */
+document.querySelectorAll('[data-acc]').forEach(function(row){
+  row.addEventListener('click', function(){ row.classList.toggle('is-open'); });
+});
+
+/* ---------- COUNT UP (works for every .stat on every page) ---------- */
+(function(){
+  var targets = [24,38,52,610,340,6];
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if(en.isIntersecting){
+        var el = en.target;
+        var group = el.closest('.stat-grid');
+        var idx = Array.prototype.indexOf.call(group.querySelectorAll('.num'), el);
+        var target = targets[idx % targets.length];
+        var start=null, dur=1400;
+        function step(ts){
+          if(!start) start=ts;
+          var p = Math.min(1,(ts-start)/dur);
+          var eased = 1 - Math.pow(1-p, 3);
+          el.textContent = Math.round(eased*target);
+          if(p<1) requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
+        obs.unobserve(el);
+      }
+    });
+  }, {threshold:0.6});
+  document.querySelectorAll('.stat .num').forEach(function(n){ obs.observe(n); });
+})();
+
+/* ---------- CANVAS REGISTRY ---------- */
+var canvasRegistry = {};
+
+function makeNetwork(canvasId, opts){
+  var canvas = document.getElementById(canvasId);
+  if(!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var w,h, dpr = Math.min(window.devicePixelRatio||1, 2);
+  var pts = [], mouse = {x:-9999,y:-9999}, visible = true, started=false;
+  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var count = opts.count || 90, linkDist = opts.linkDist || 130;
+  var color = opts.color || '243,240,231', accent = opts.accent || '109,132,255';
+
+  function resize(){
+    var rect = canvas.parentElement.getBoundingClientRect();
+    w = rect.width || 1; h = rect.height || 1;
+    canvas.width = w*dpr; canvas.height = h*dpr;
+    canvas.style.width = w+'px'; canvas.style.height = h+'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  function init(){
+    pts = [];
+    for(var i=0;i<count;i++){
+      pts.push({ x:Math.random()*w, y:Math.random()*h, vx:(Math.random()-0.5)*0.18, vy:(Math.random()-0.5)*0.18, r:Math.random()*1.4+0.6 });
+    }
+  }
+  canvas.parentElement.addEventListener('mousemove', function(e){ var rect=canvas.getBoundingClientRect(); mouse.x=e.clientX-rect.left; mouse.y=e.clientY-rect.top; });
+  canvas.parentElement.addEventListener('mouseleave', function(){ mouse.x=-9999; mouse.y=-9999; });
+
+  function tick(){
+    if(visible && w>1){
+      ctx.clearRect(0,0,w,h);
+      for(var i=0;i<pts.length;i++){
+        var p = pts[i];
+        if(!reduced){
+          p.x += p.vx; p.y += p.vy;
+          var dx=p.x-mouse.x, dy=p.y-mouse.y, d2=dx*dx+dy*dy;
+          if(d2<6000){ var f=(6000-d2)/6000*0.6; p.x+=dx*0.02*f; p.y+=dy*0.02*f; }
+          if(p.x<0||p.x>w) p.vx*=-1;
+          if(p.y<0||p.y>h) p.vy*=-1;
+        }
+      }
+      for(var i=0;i<pts.length;i++){
+        for(var j=i+1;j<pts.length;j++){
+          var a=pts[i], b=pts[j], dx=a.x-b.x, dy=a.y-b.y, dist=Math.sqrt(dx*dx+dy*dy);
+          if(dist<linkDist){
+            var alpha=(1-dist/linkDist)*0.5;
+            var da=Math.min(Math.hypot(a.x-mouse.x,a.y-mouse.y),Math.hypot(b.x-mouse.x,b.y-mouse.y));
+            var near = da<120;
+            ctx.strokeStyle = near ? 'rgba('+accent+','+Math.min(0.9,alpha+0.35)+')' : 'rgba('+color+','+alpha*0.5+')';
+            ctx.lineWidth = near?1.1:0.6;
+            ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+          }
+        }
+      }
+      for(var i=0;i<pts.length;i++){ var p=pts[i]; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fillStyle='rgba('+color+',0.75)'; ctx.fill(); }
+    }
+    requestAnimationFrame(tick);
+  }
+  var vis = new IntersectionObserver(function(entries){ entries.forEach(function(en){ visible=en.isIntersecting; }); }, {threshold:0});
+  vis.observe(canvas);
+  canvasRegistry[canvasId] = { resize:resize, init:function(){ init(); if(!started){ started=true; requestAnimationFrame(tick); } } };
+  resize(); init(); requestAnimationFrame(tick); started=true;
+}
+makeNetwork('hero-canvas', {count: window.innerWidth<760?45:110, linkDist:130});
+
+/* small decorative network used in the "Leadership" panel isn't needed; MUN + Speaking panels get lightweight variants below */
+makeNetwork('panel-map-canvas', {count: 40, linkDist:80});
+
+/* ---------- ABSTRACT WORLD MAP (dot cloud) — reused for MUN full map + Home mini panel ---------- */
+function makeMap(canvasId){
+  var canvas = document.getElementById(canvasId);
+  if(!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var dpr = Math.min(window.devicePixelRatio||1,2);
+  var regions = [
+    {cx:0.16,cy:0.32,rx:0.11,ry:0.16,n:70},{cx:0.26,cy:0.62,rx:0.075,ry:0.17,n:40},
+    {cx:0.50,cy:0.24,rx:0.06,ry:0.09,n:35},{cx:0.53,cy:0.50,rx:0.075,ry:0.19,n:55},
+    {cx:0.73,cy:0.28,rx:0.16,ry:0.16,n:95},{cx:0.85,cy:0.68,rx:0.07,ry:0.07,n:25}
+  ];
+  var dots = [];
+  function resize(){
+    var rect = canvas.parentElement.getBoundingClientRect();
+    var w = rect.width||1, h = rect.height||1;
+    canvas.width=w*dpr; canvas.height=h*dpr; canvas.style.width=w+'px'; canvas.style.height=h+'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    dots = [];
+    regions.forEach(function(r){
+      for(var i=0;i<r.n;i++){
+        var a=Math.random()*Math.PI*2, rad=Math.sqrt(Math.random());
+        dots.push({ x:(r.cx+Math.cos(a)*r.rx*rad)*w, y:(r.cy+Math.sin(a)*r.ry*rad)*h });
+      }
+    });
+    ctx.clearRect(0,0,w,h);
+    dots.forEach(function(d){ ctx.beginPath(); ctx.arc(d.x,d.y,1.1,0,Math.PI*2); ctx.fillStyle='rgba(243,240,231,0.32)'; ctx.fill(); });
+  }
+  canvasRegistry[canvasId] = { resize:resize };
+  resize();
+}
+makeMap('map-canvas');
+
+document.querySelectorAll('.map-hub').forEach(function(hub){
+  var tip = hub.parentElement.querySelector('.map-tip');
+  if(!tip) return;
+  hub.addEventListener('mouseenter', function(){ tip.textContent = hub.dataset.city+'  '+hub.dataset.geo; tip.classList.add('is-shown'); });
+  hub.addEventListener('mouseleave', function(){ tip.classList.remove('is-shown'); });
+});
+
+/* ---------- WAVEFORM — reused for full Public Speaking page + Home mini panel ---------- */
+function makeWave(canvasId, opts){
+  var canvas = document.getElementById(canvasId);
+  if(!canvas) return;
+  opts = opts || {};
+  var ctx = canvas.getContext('2d');
+  var dpr = Math.min(window.devicePixelRatio||1,2);
+  var w,h, mx=-9999, t=0, visible=true;
+  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function resize(){
+    var rect = canvas.getBoundingClientRect();
+    w = rect.width||1; h = rect.height||1;
+    canvas.width=w*dpr; canvas.height=h*dpr; canvas.style.width=w+'px'; canvas.style.height=h+'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  canvas.addEventListener('mousemove', function(e){ var r=canvas.getBoundingClientRect(); mx=e.clientX-r.left; });
+  canvas.addEventListener('mouseleave', function(){ mx=-9999; });
+  function tick(){
+    if(visible && w>1){
+      t += reduced?0:0.045;
+      ctx.clearRect(0,0,w,h);
+      var bars = opts.bars||64, gap=opts.gap||4;
+      var bw=(w-(bars-1)*gap)/bars;
+      for(var i=0;i<bars;i++){
+        var x=i*(bw+gap);
+        var base=Math.sin(t+i*0.35)*0.5+Math.sin(t*1.7+i*0.12)*0.3;
+        var amp=(base*0.5+0.5);
+        var dist=Math.abs(x+bw/2-mx);
+        var boost=Math.max(0,1-dist/160);
+        amp=Math.min(1, amp*0.6+boost*0.9);
+        var bh=Math.max(3,amp*h*0.9), y=(h-bh)/2;
+        ctx.fillStyle = boost>0.15 ? (opts.activeColor||'#3552ff') : (opts.baseColor||'rgba(10,13,19,0.55)');
+        ctx.fillRect(x,y,bw,bh);
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+  var vis = new IntersectionObserver(function(e){ e.forEach(function(en){ visible=en.isIntersecting; }); },{threshold:0});
+  vis.observe(canvas);
+  canvasRegistry[canvasId] = { resize:resize };
+  resize(); requestAnimationFrame(tick);
+}
+makeWave('wave-canvas', {bars:64, activeColor:'#3552ff', baseColor:'rgba(10,13,19,0.55)'});
+makeWave('panel-wave-canvas', {bars:24, gap:3, activeColor:'#3552ff', baseColor:'rgba(10,13,19,0.35)'});
+
+/* ---------- HOME "leadership" panel — ascending bars (CSS, no canvas needed) ---------- */
+(function(){
+  var box = document.getElementById('panel-bars');
+  if(!box) return;
+  for(var i=0;i<14;i++){
+    var bar = document.createElement('i');
+    bar.style.height = (20 + Math.random()*80) + '%';
+    box.appendChild(bar);
+  }
+})();
+
+/* ---------- HERO HUD rotating readout ---------- */
+(function(){
+  var el = document.getElementById('hud-line');
+  if(!el) return;
+  var words = ['RESEARCH','REPRESENT','NEGOTIATE','RESOLVE','LEAD'];
+  var i=0;
+  setInterval(function(){ i=(i+1)%words.length; el.style.opacity=0; setTimeout(function(){ el.textContent=words[i]; el.style.transition='opacity .3s'; el.style.opacity=1; },300); }, 2200);
+})();
+
+/* ---------- JOURNEY HORIZONTAL SCROLL (generic, works for any .journey-wrap on the active page) ---------- */
+(function(){
+  var wrap = document.querySelector('.journey-wrap');
+  if(!wrap) return;
+  var track = wrap.querySelector('[data-journey-track]');
+  var bar = wrap.querySelector('[data-journey-bar]');
+  var idxEl = wrap.querySelector('[data-journey-index]');
+  var totalEl = wrap.querySelector('[data-journey-total]');
+  var total = track.children.length;
+  if(totalEl) totalEl.textContent = String(total).padStart(2,'0');
+  var ticking=false;
+  function update(){
+    ticking=false;
+    if(window.innerWidth<900 || !wrap.closest('.page').classList.contains('is-active')) return;
+    var rect = wrap.getBoundingClientRect();
+    var totalH = wrap.offsetHeight - window.innerHeight;
+    var progress = Math.min(1, Math.max(0, -rect.top/totalH));
+    var maxShift = track.scrollWidth - window.innerWidth;
+    track.style.transform = 'translateX(-'+(progress*maxShift)+'px)';
+    if(bar) bar.style.width=(progress*100)+'%';
+    if(idxEl) idxEl.textContent = String(Math.min(total, Math.floor(progress*total)+1)).padStart(2,'0');
+  }
+  window.addEventListener('scroll', function(){ if(!ticking){ requestAnimationFrame(update); ticking=true; } }, {passive:true});
+  window.addEventListener('resize', update);
+  window.addEventListener('hashchange', function(){ setTimeout(update, 50); });
+  update();
+})();
+
+/* ---------- TIMELINE SPINE FILL (generic) ---------- */
+(function(){
+  document.querySelectorAll('[data-timeline]').forEach(function(wrap){
+    var fill = wrap.querySelector('[data-tl-fill]');
+    if(!fill) return;
+    var ticking=false;
+    function update(){
+      ticking=false;
+      var rect = wrap.getBoundingClientRect();
+      var total = rect.height;
+      var visiblePx = Math.min(total, Math.max(0, window.innerHeight*0.75 - rect.top));
+      fill.style.height = Math.min(100,(visiblePx/total)*100)+'%';
+    }
+    window.addEventListener('scroll', function(){ if(!ticking){ requestAnimationFrame(update); ticking=true; } }, {passive:true});
+    window.addEventListener('resize', update);
+    window.addEventListener('hashchange', function(){ setTimeout(update, 50); });
+    update();
+  });
+})();
+
+/* ---------- FILTERS (Achievements + Gallery) ---------- */
+function wireFilterBar(barId, itemSelector){
+  var bar = document.getElementById(barId);
+  if(!bar) return;
+  var items = document.querySelectorAll(itemSelector);
+  bar.addEventListener('click', function(e){
+    var btn = e.target.closest('button[data-filter]');
+    if(!btn) return;
+    setFilterActive(bar, btn.dataset.filter, items);
+  });
+}
+function setFilterActive(bar, val, items){
+  bar.querySelectorAll('button').forEach(function(b){ b.classList.toggle('is-active', b.dataset.filter===val); });
+  items.forEach(function(it){ it.style.display = (val==='all' || it.dataset.category===val) ? '' : 'none'; });
+}
+function applyFilter(barId, itemSelectorIgnored, val){
+  var bar = document.getElementById(barId);
+  if(!bar) return;
+  var items = barId==='ach-filters' ? document.querySelectorAll('#ach-list .ach-row') : document.querySelectorAll('#gallery-filters ~ .gallery-grid .g-tile, .gallery-grid .g-tile');
+  setFilterActive(bar, val, items);
+}
+wireFilterBar('ach-filters', '#ach-list .ach-row');
+wireFilterBar('gallery-filters', '.gallery-grid .g-tile');
+
+/* ---------- TESTIMONIAL-STYLE ARROW ROWS already handled by data-reveal via observeReveals ---------- */
+
+/* ---------- GALLERY LIGHTBOX ---------- */
+(function(){
+  var lb = document.getElementById('lightbox');
+  var label = document.getElementById('lb-label');
+  document.addEventListener('click', function(e){
+    var tile = e.target.closest('.g-tile, .strip-tile');
+    if(!tile) return;
+    var info = tile.querySelector('.g-info') || tile.querySelector('span');
+    label.textContent = info ? info.textContent : '[ PHOTO ]';
+    lb.classList.add('is-open');
+  });
+  lb.addEventListener('click', function(e){ if(e.target===lb) lb.classList.remove('is-open'); });
+  lb.querySelector('.lb-close').addEventListener('click', function(){ lb.classList.remove('is-open'); });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape') lb.classList.remove('is-open'); });
+})();
+
+/* ---------- JOIN FORM ---------- */
+(function(){
+  var form = document.getElementById('join-form');
+  if(!form) return;
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    form.style.display='none';
+    document.getElementById('join-success').classList.add('is-shown');
+  });
+})();
+
+/* ---------- INIT ---------- */
+route();
+
+})();
+</script>
